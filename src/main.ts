@@ -19,33 +19,47 @@ const clearBtn = document.createElement("button");
 clearBtn.innerHTML = "Clear";
 app.append(clearBtn);
 
+const lines : { x: number, y: number }[][] = [];
+let currentLine : { x: number, y: number }[] | null = null;
+
 const cursor = { active: false, x: 0, y: 0 };
 
+canvas.addEventListener("drawing-changed", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = 0; i < lines.length; i++) {
+        ctx.beginPath();
+        ctx.moveTo(lines[i][0].x, lines[i][0].y);
+        for(let j = 1; j < lines[i].length; j++) {
+            ctx.lineTo(lines[i][j].x, lines[i][j].y);
+        }
+        ctx.stroke();
+    }
+});
+
 canvas.addEventListener("mousedown", (e) => {
-    cursor.active = true;
-    cursor.x = e.offsetX;
-    cursor.y = e.offsetY;
+    currentLine = [{ x: e.offsetX, y: e.offsetY }];
+    lines.push(currentLine);
+    canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mousemove", (e) => {
-    if (cursor.active) {
-        ctx.beginPath();
-        ctx.moveTo(cursor.x, cursor.y);
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
-        cursor.x = e.offsetX;
-        cursor.y = e.offsetY;
+    if (currentLine != null) {
+        currentLine.push({ x: e.offsetX, y: e.offsetY });
+        canvas.dispatchEvent(new Event("drawing-changed"));
     }
 });
 
 canvas.addEventListener("mouseup", (e) => {
-    cursor.active = false;
+    currentLine = null;
 });
 
 canvas.addEventListener("mouseleave", (e) => {
-    cursor.active = false;
+    currentLine = null;
 });
 
 clearBtn.addEventListener("click", () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    while(lines.length > 0) {
+        lines.pop();
+    }
+    canvas.dispatchEvent(new Event("drawing-changed"));
 });

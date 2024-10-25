@@ -5,6 +5,12 @@ interface Drawable {
     drag(x: number, y: number): void;
 }
 
+interface Tool {
+    move(x: number, y: number): void;
+    drawPreview(ctx: CanvasRenderingContext2D): void;
+    createDrawable(): Drawable;
+}
+
 class Line implements Drawable {
   points: { x: number, y: number }[];
   thickness: number;
@@ -26,6 +32,32 @@ class Line implements Drawable {
 
   drag(x: number, y: number): void {
     this.points.push({ x: x, y: y });
+  }
+}
+
+class MarkerTool implements Tool {
+  thickness: number;
+  x: number = 0;
+  y: number = 0;
+
+  constructor(thickness: number) {
+    this.thickness = thickness;
+  }
+
+  move(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
+  }
+
+  drawPreview(ctx: CanvasRenderingContext2D): void {
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  createDrawable(): Drawable {
+    return new Line(this.x, this.y, this.thickness);
   }
 }
 
@@ -68,8 +100,7 @@ app.append(redoBtn);
 const displayList : Drawable[] = [];
 const redoStack : Drawable[] = [];
 let currentDrawable : Drawable | null = null;
-
-let markerThickness : number = 3;
+let currentTool: Tool = new MarkerTool(3);
 
 canvas.addEventListener("drawing-changed", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -78,8 +109,16 @@ canvas.addEventListener("drawing-changed", () => {
     }
 });
 
+canvas.addEventListener("tool-moved", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = 0; i < displayList.length; i++) {
+      displayList[i].draw(ctx);
+    }
+    currentTool.drawPreview(ctx)
+});
+
 canvas.addEventListener("mousedown", (e) => {
-    currentDrawable = new Line(e.offsetX, e.offsetY, markerThickness);
+    currentDrawable = currentTool.createDrawable();
     displayList.push(currentDrawable);
     canvas.dispatchEvent(new Event("drawing-changed"));
 });
@@ -88,25 +127,32 @@ canvas.addEventListener("mousemove", (e) => {
     if (currentDrawable != null) {
         currentDrawable.drag(e.offsetX, e.offsetY);
         canvas.dispatchEvent(new Event("drawing-changed"));
+    } else {
+        currentTool.move(e.offsetX, e.offsetY);
+        canvas.dispatchEvent(new Event("tool-moved"));
     }
 });
 
 canvas.addEventListener("mouseup", (e) => {
     currentDrawable = null;
+    currentTool.move(e.offsetX, e.offsetY);
+    canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 canvas.addEventListener("mouseleave", (e) => {
     currentDrawable = null;
+    currentTool.move(e.offsetX, e.offsetY);
+    canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 thinMarkerBtn.addEventListener("click", (e) => {
-    markerThickness = 3;
+    currentTool = new MarkerTool(3);
     thickMarkerBtn.classList.remove("selected");
     thinMarkerBtn.classList.add("selected");
 })
 
 thickMarkerBtn.addEventListener("click", (e) => {
-    markerThickness = 10;
+    currentTool = new MarkerTool(10);
     thinMarkerBtn.classList.remove("selected");
     thickMarkerBtn.classList.add("selected");
 })

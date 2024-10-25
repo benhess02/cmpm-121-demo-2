@@ -81,6 +81,10 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+button.selected {
+  background-color: #2f2f2f;
+}
+
 canvas {
   display: block;
   border: 1px solid black;

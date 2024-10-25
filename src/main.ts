@@ -19,18 +19,25 @@ const clearBtn = document.createElement("button");
 clearBtn.innerHTML = "Clear";
 app.append(clearBtn);
 
-const lines : { x: number, y: number }[][] = [];
-let currentLine : { x: number, y: number }[] | null = null;
+const undoBtn = document.createElement("button");
+undoBtn.innerHTML = "Undo";
+app.append(undoBtn);
 
-const cursor = { active: false, x: 0, y: 0 };
+const redoBtn = document.createElement("button");
+redoBtn.innerHTML = "Redo";
+app.append(redoBtn);
+
+const displayList : { x: number, y: number }[][] = [];
+const redoStack : { x: number, y: number }[][] = [];
+let currentLine : { x: number, y: number }[] | null = null;
 
 canvas.addEventListener("drawing-changed", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let i = 0; i < lines.length; i++) {
+    for(let i = 0; i < displayList.length; i++) {
         ctx.beginPath();
-        ctx.moveTo(lines[i][0].x, lines[i][0].y);
-        for(let j = 1; j < lines[i].length; j++) {
-            ctx.lineTo(lines[i][j].x, lines[i][j].y);
+        ctx.moveTo(displayList[i][0].x, displayList[i][0].y);
+        for(let j = 1; j < displayList[i].length; j++) {
+            ctx.lineTo(displayList[i][j].x, displayList[i][j].y);
         }
         ctx.stroke();
     }
@@ -38,7 +45,7 @@ canvas.addEventListener("drawing-changed", () => {
 
 canvas.addEventListener("mousedown", (e) => {
     currentLine = [{ x: e.offsetX, y: e.offsetY }];
-    lines.push(currentLine);
+    displayList.push(currentLine);
     canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
@@ -58,8 +65,24 @@ canvas.addEventListener("mouseleave", (e) => {
 });
 
 clearBtn.addEventListener("click", () => {
-    while(lines.length > 0) {
-        lines.pop();
+    while(displayList.length > 0) {
+        displayList.pop();
     }
     canvas.dispatchEvent(new Event("drawing-changed"));
+});
+
+undoBtn.addEventListener("click", () => {
+    if(displayList.length > 0) {
+        redoStack.push(displayList.pop()!);
+        currentLine = null;
+        canvas.dispatchEvent(new Event("drawing-changed"));
+    }
+});
+
+redoBtn.addEventListener("click", () => {
+    if(redoStack.length > 0) {
+        displayList.push(redoStack.pop()!);
+        currentLine = null;
+        canvas.dispatchEvent(new Event("drawing-changed"));
+    }
 });

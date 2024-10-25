@@ -1,5 +1,31 @@
 import "./style.css";
 
+interface Drawable {
+    draw(ctx: CanvasRenderingContext2D): void;
+    drag(x: number, y: number): void;
+}
+
+class Line implements Drawable {
+  points: { x: number, y: number }[];
+
+  constructor(x: number, y: number) {
+    this.points = [{x: x, y: y}];
+  }
+
+  draw(ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for(let j = 1; j < this.points.length; j++) {
+      ctx.lineTo(this.points[j].x, this.points[j].y);
+    }
+    ctx.stroke();
+  }
+
+  drag(x: number, y: number): void {
+    this.points.push({ x: x, y: y });
+  }
+}
+
 const APP_NAME = "Hello";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
@@ -27,41 +53,36 @@ const redoBtn = document.createElement("button");
 redoBtn.innerHTML = "Redo";
 app.append(redoBtn);
 
-const displayList : { x: number, y: number }[][] = [];
-const redoStack : { x: number, y: number }[][] = [];
-let currentLine : { x: number, y: number }[] | null = null;
+const displayList : Drawable[] = [];
+const redoStack : Drawable[] = [];
+let currentDrawable : Drawable | null = null;
 
 canvas.addEventListener("drawing-changed", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for(let i = 0; i < displayList.length; i++) {
-        ctx.beginPath();
-        ctx.moveTo(displayList[i][0].x, displayList[i][0].y);
-        for(let j = 1; j < displayList[i].length; j++) {
-            ctx.lineTo(displayList[i][j].x, displayList[i][j].y);
-        }
-        ctx.stroke();
+      displayList[i].draw(ctx);
     }
 });
 
 canvas.addEventListener("mousedown", (e) => {
-    currentLine = [{ x: e.offsetX, y: e.offsetY }];
-    displayList.push(currentLine);
+    currentDrawable = new Line(e.offsetX, e.offsetY);
+    displayList.push(currentDrawable);
     canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mousemove", (e) => {
-    if (currentLine != null) {
-        currentLine.push({ x: e.offsetX, y: e.offsetY });
+    if (currentDrawable != null) {
+        currentDrawable.drag(e.offsetX, e.offsetY);
         canvas.dispatchEvent(new Event("drawing-changed"));
     }
 });
 
 canvas.addEventListener("mouseup", (e) => {
-    currentLine = null;
+    currentDrawable = null;
 });
 
 canvas.addEventListener("mouseleave", (e) => {
-    currentLine = null;
+    currentDrawable = null;
 });
 
 clearBtn.addEventListener("click", () => {
@@ -74,7 +95,7 @@ clearBtn.addEventListener("click", () => {
 undoBtn.addEventListener("click", () => {
     if(displayList.length > 0) {
         redoStack.push(displayList.pop()!);
-        currentLine = null;
+        currentDrawable = null;
         canvas.dispatchEvent(new Event("drawing-changed"));
     }
 });
@@ -82,7 +103,7 @@ undoBtn.addEventListener("click", () => {
 redoBtn.addEventListener("click", () => {
     if(redoStack.length > 0) {
         displayList.push(redoStack.pop()!);
-        currentLine = null;
+        currentDrawable = null;
         canvas.dispatchEvent(new Event("drawing-changed"));
     }
 });

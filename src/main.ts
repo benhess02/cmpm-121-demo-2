@@ -36,32 +36,80 @@ class Line implements Drawable {
 }
 
 class MarkerTool implements Tool {
-  thickness: number;
-  x: number = 0;
-  y: number = 0;
-
-  constructor(thickness: number) {
-    this.thickness = thickness;
-  }
-
-  move(x: number, y: number): void {
-    this.x = x;
-    this.y = y;
-  }
-
-  drawPreview(ctx: CanvasRenderingContext2D): void {
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  createDrawable(): Drawable {
-    return new Line(this.x, this.y, this.thickness);
-  }
+    thickness: number;
+    x: number = 0;
+    y: number = 0;
+  
+    constructor(thickness: number) {
+      this.thickness = thickness;
+    }
+  
+    move(x: number, y: number): void {
+      this.x = x;
+      this.y = y;
+    }
+  
+    drawPreview(ctx: CanvasRenderingContext2D): void {
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  
+    createDrawable(): Drawable {
+      return new Line(this.x, this.y, this.thickness);
+    }
 }
 
-const APP_NAME = "Hello";
+class Sticker implements Drawable {
+    x: number;
+    y: number;
+    symbol: string;
+
+    constructor(x: number, y: number, symbol: string) {
+        this.x = x;
+        this.y = y;
+        this.symbol = symbol;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.font = "50px serif";
+        ctx.fillText(this.symbol, this.x - 25, this.y + 25);
+    }
+
+    drag(x: number, y: number): void {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+class StickerTool implements Tool {
+    symbol: string;
+    x: number = 0;
+    y: number = 0;
+  
+    constructor(symbol: string) {
+      this.symbol = symbol;
+    }
+  
+    move(x: number, y: number): void {
+      this.x = x;
+      this.y = y;
+    }
+  
+    drawPreview(ctx: CanvasRenderingContext2D): void {
+        ctx.font = "50px serif";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+        ctx.fillText(this.symbol, this.x - 25, this.y + 25);
+        ctx.fillStyle = "rgba(0, 0, 0, 1.0)"
+    }
+  
+    createDrawable(): Drawable {
+      return new Sticker(this.x, this.y, this.symbol);
+    }
+}
+
+const APP_NAME = "Tiny Paint";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 document.title = APP_NAME;
@@ -70,14 +118,26 @@ const titleText = document.createElement("h1");
 titleText.innerHTML = APP_NAME;
 app.append(titleText);
 
-const thinMarkerBtn = document.createElement("button");
-thinMarkerBtn.innerHTML = "Thin Marker";
-thinMarkerBtn.classList.add("selected");
-app.append(thinMarkerBtn);
+const toolButtons : HTMLButtonElement[] = [];
+function addToolButton(name: string, tool: Tool) {
+    const toolBtn = document.createElement("button");
+    toolBtn.innerHTML = name;
+    toolBtn.addEventListener("click", (e) => {
+        currentTool = tool;
+        toolButtons.forEach((btn) => btn.classList.remove("selected"));
+        toolBtn.classList.add("selected");
+        canvas.dispatchEvent(new Event("tool-moved"));
+    });
+    app.append(toolBtn);
+    toolButtons.push(toolBtn);
+}
 
-const thickMarkerBtn = document.createElement("button");
-thickMarkerBtn.innerHTML = "Thick Marker";
-app.append(thickMarkerBtn);
+addToolButton("Thin Marker", new MarkerTool(3));
+addToolButton("Thick Marker", new MarkerTool(10));
+app.append(document.createElement("br"));
+addToolButton("😂", new StickerTool("😂"));
+addToolButton("😡", new StickerTool("😡"));
+addToolButton("🎆", new StickerTool("🎆"));
 
 const canvas = document.createElement("canvas");
 canvas.width = 256;
@@ -114,7 +174,7 @@ canvas.addEventListener("tool-moved", () => {
     for(let i = 0; i < displayList.length; i++) {
       displayList[i].draw(ctx);
     }
-    currentTool.drawPreview(ctx)
+    currentTool.drawPreview(ctx);
 });
 
 canvas.addEventListener("mousedown", (e) => {
@@ -144,18 +204,6 @@ canvas.addEventListener("mouseleave", (e) => {
     currentTool.move(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new Event("tool-moved"));
 });
-
-thinMarkerBtn.addEventListener("click", (e) => {
-    currentTool = new MarkerTool(3);
-    thickMarkerBtn.classList.remove("selected");
-    thinMarkerBtn.classList.add("selected");
-})
-
-thickMarkerBtn.addEventListener("click", (e) => {
-    currentTool = new MarkerTool(10);
-    thinMarkerBtn.classList.remove("selected");
-    thickMarkerBtn.classList.add("selected");
-})
 
 clearBtn.addEventListener("click", () => {
     while(displayList.length > 0) {

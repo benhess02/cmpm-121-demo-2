@@ -188,6 +188,24 @@ customStickerBtn.addEventListener("click", () => {
   }
 });
 
+const exportBtn = document.createElement("button");
+exportBtn.innerHTML = "Export";
+app.append(exportBtn);
+exportBtn.addEventListener("click", () => {
+  const large_canvas = document.createElement("canvas");
+  large_canvas.width = 1024;
+  large_canvas.height = 1024;
+  const large_ctx = large_canvas.getContext("2d")!;
+  large_ctx.scale(large_canvas.width / canvas.width, large_canvas.height / canvas.height);
+  for(let i = 0; i < displayList.length; i++) {
+    displayList[i].draw(large_ctx);
+  }
+  const anchor = document.createElement("a");
+  anchor.href = large_canvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
+
 const displayList : Drawable[] = [];
 const redoStack : Drawable[] = [];
 let currentDrawable : Drawable | null = null;

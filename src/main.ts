@@ -118,6 +118,8 @@ const titleText = document.createElement("h1");
 titleText.innerHTML = APP_NAME;
 app.append(titleText);
 
+const toolbox = document.createElement("div");
+app.append(toolbox);
 const toolButtons : HTMLButtonElement[] = [];
 function addToolButton(name: string, tool: Tool) {
     const toolBtn = document.createElement("button");
@@ -128,13 +130,12 @@ function addToolButton(name: string, tool: Tool) {
         toolBtn.classList.add("selected");
         canvas.dispatchEvent(new Event("tool-moved"));
     });
-    app.append(toolBtn);
+    toolbox.append(toolBtn);
     toolButtons.push(toolBtn);
 }
 
 addToolButton("Thin Marker", new MarkerTool(3));
 addToolButton("Thick Marker", new MarkerTool(10));
-app.append(document.createElement("br"));
 addToolButton("😂", new StickerTool("😂"));
 addToolButton("😡", new StickerTool("😡"));
 addToolButton("🎆", new StickerTool("🎆"));
@@ -148,14 +149,44 @@ const ctx = canvas.getContext("2d")!;
 const clearBtn = document.createElement("button");
 clearBtn.innerHTML = "Clear";
 app.append(clearBtn);
+clearBtn.addEventListener("click", () => {
+  while(displayList.length > 0) {
+      displayList.pop();
+  }
+  canvas.dispatchEvent(new Event("drawing-changed"));
+});
 
 const undoBtn = document.createElement("button");
 undoBtn.innerHTML = "Undo";
 app.append(undoBtn);
+undoBtn.addEventListener("click", () => {
+  if(displayList.length > 0) {
+      redoStack.push(displayList.pop()!);
+      currentDrawable = null;
+      canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
 
 const redoBtn = document.createElement("button");
 redoBtn.innerHTML = "Redo";
 app.append(redoBtn);
+redoBtn.addEventListener("click", () => {
+  if(redoStack.length > 0) {
+      displayList.push(redoStack.pop()!);
+      currentDrawable = null;
+      canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
+
+const customStickerBtn = document.createElement("button");
+customStickerBtn.innerHTML = "Custom Sticker";
+app.append(customStickerBtn);
+customStickerBtn.addEventListener("click", () => {
+  const text = prompt("Custom sticker text", "🧽");
+  if(text != null) {
+    addToolButton(text, new StickerTool(text));
+  }
+});
 
 const displayList : Drawable[] = [];
 const redoStack : Drawable[] = [];
@@ -203,27 +234,4 @@ canvas.addEventListener("mouseleave", (e) => {
     currentDrawable = null;
     currentTool.move(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new Event("tool-moved"));
-});
-
-clearBtn.addEventListener("click", () => {
-    while(displayList.length > 0) {
-        displayList.pop();
-    }
-    canvas.dispatchEvent(new Event("drawing-changed"));
-});
-
-undoBtn.addEventListener("click", () => {
-    if(displayList.length > 0) {
-        redoStack.push(displayList.pop()!);
-        currentDrawable = null;
-        canvas.dispatchEvent(new Event("drawing-changed"));
-    }
-});
-
-redoBtn.addEventListener("click", () => {
-    if(redoStack.length > 0) {
-        displayList.push(redoStack.pop()!);
-        currentDrawable = null;
-        canvas.dispatchEvent(new Event("drawing-changed"));
-    }
 });

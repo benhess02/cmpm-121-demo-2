@@ -8,6 +8,7 @@ interface Drawable {
 interface Tool {
     move(x: number, y: number): void;
     drawPreview(ctx: CanvasRenderingContext2D): void;
+    select() : void;
     createDrawable(): Drawable;
 }
 
@@ -55,31 +56,45 @@ class MarkerTool implements Tool {
       ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
       ctx.stroke();
     }
+
+    select(): void {
+    }
   
     createDrawable(): Drawable {
       return new Line(this.x, this.y, this.thickness);
     }
 }
 
+const STICKER_OFFSET_X = 35;
+const STICKER_OFFSET_Y = 16;
+
 class Sticker implements Drawable {
     x: number;
     y: number;
+    base_rotation: number;
+    rotation: number;
     symbol: string;
 
-    constructor(x: number, y: number, symbol: string) {
+    constructor(x: number, y: number, rotation: number, symbol: string) {
         this.x = x;
         this.y = y;
+        this.base_rotation = rotation;
+        this.rotation = rotation;
         this.symbol = symbol;
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.font = "50px serif";
-        ctx.fillText(this.symbol, this.x - 25, this.y + 25);
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillText(this.symbol, -STICKER_OFFSET_X, STICKER_OFFSET_Y);
+        // Can't use resetTransform here since we might be on the scaled export canvas
+        ctx.rotate(-this.rotation);
+        ctx.translate(-this.x, -this.y);
     }
 
     drag(x: number, y: number): void {
-        this.x = x;
-        this.y = y;
+      this.rotation = this.base_rotation + (x - this.x) / 20;
     }
 }
 
@@ -87,6 +102,7 @@ class StickerTool implements Tool {
     symbol: string;
     x: number = 0;
     y: number = 0;
+    rotation: number = 0;
   
     constructor(symbol: string) {
       this.symbol = symbol;
@@ -100,12 +116,21 @@ class StickerTool implements Tool {
     drawPreview(ctx: CanvasRenderingContext2D): void {
         ctx.font = "50px serif";
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-        ctx.fillText(this.symbol, this.x - 25, this.y + 25);
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillText(this.symbol, -STICKER_OFFSET_X, STICKER_OFFSET_Y);
+        // Can't use resetTransform here since we might be on the scaled export canvas
+        ctx.rotate(-this.rotation);
+        ctx.translate(-this.x, -this.y);
         ctx.fillStyle = "rgba(0, 0, 0, 1.0)"
+    }
+
+    select(): void {
+      this.rotation = Math.random() * Math.PI * 2;
     }
   
     createDrawable(): Drawable {
-      return new Sticker(this.x, this.y, this.symbol);
+      return new Sticker(this.x, this.y, this.rotation, this.symbol);
     }
 }
 
@@ -127,6 +152,7 @@ function addToolButton(name: string, tool: Tool) {
     toolBtn.innerHTML = name;
     toolBtn.addEventListener("click", (e) => {
         currentTool = tool;
+        tool.select();
         toolButtons.forEach((btn) => btn.classList.remove("selected"));
         toolBtn.classList.add("selected");
         canvas.dispatchEvent(new Event("tool-moved"));
@@ -214,18 +240,20 @@ const redoStack : Drawable[] = [];
 let currentDrawable : Drawable | null = null;
 
 canvas.addEventListener("drawing-changed", () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let i = 0; i < displayList.length; i++) {
-      displayList[i].draw(ctx);
-    }
+  ctx.resetTransform();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for(let i = 0; i < displayList.length; i++) {
+    displayList[i].draw(ctx);
+  }
 });
 
 canvas.addEventListener("tool-moved", () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let i = 0; i < displayList.length; i++) {
-      displayList[i].draw(ctx);
-    }
-    currentTool.drawPreview(ctx);
+  ctx.resetTransform();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for(let i = 0; i < displayList.length; i++) {
+    displayList[i].draw(ctx);
+  }
+  currentTool.drawPreview(ctx);
 });
 
 canvas.addEventListener("mousedown", (e) => {

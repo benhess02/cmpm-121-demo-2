@@ -121,6 +121,7 @@ app.append(titleText);
 const toolbox = document.createElement("div");
 app.append(toolbox);
 const toolButtons : HTMLButtonElement[] = [];
+let currentTool: Tool = new MarkerTool(4);
 function addToolButton(name: string, tool: Tool) {
     const toolBtn = document.createElement("button");
     toolBtn.innerHTML = name;
@@ -134,11 +135,13 @@ function addToolButton(name: string, tool: Tool) {
     toolButtons.push(toolBtn);
 }
 
-addToolButton("Thin Marker", new MarkerTool(3));
-addToolButton("Thick Marker", new MarkerTool(10));
+addToolButton("Thin Marker", currentTool);
+addToolButton("Thick Marker", new MarkerTool(15));
 addToolButton("😂", new StickerTool("😂"));
 addToolButton("😡", new StickerTool("😡"));
 addToolButton("🎆", new StickerTool("🎆"));
+
+toolButtons[0].classList.add("selected");
 
 const canvas = document.createElement("canvas");
 canvas.width = 256;
@@ -209,7 +212,6 @@ exportBtn.addEventListener("click", () => {
 const displayList : Drawable[] = [];
 const redoStack : Drawable[] = [];
 let currentDrawable : Drawable | null = null;
-let currentTool: Tool = new MarkerTool(3);
 
 canvas.addEventListener("drawing-changed", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);

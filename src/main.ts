@@ -211,7 +211,8 @@ const customStickerBtn = document.createElement("button");
 customStickerBtn.innerHTML = "Custom Sticker";
 app.append(customStickerBtn);
 customStickerBtn.addEventListener("click", () => {
-  const text = prompt("Custom sticker text", "🧽");
+  const customEmojis: readonly string[] = ["👹","👽","🤓","🤯","🥶"];
+  const text = prompt("Custom sticker text", customEmojis[Math.floor(Math.random() * customEmojis.length)]);
   if(text != null) {
     addToolButton(text, new StickerTool(text));
   }
